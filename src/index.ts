@@ -25,6 +25,7 @@ export default class MetamaskService {
   private web3Provider;
   private testnet: string;
   private isProduction: boolean;
+  public walletAddress: string;
 
   constructor({ testnet, isProduction = false }: IMetamaskService) {
     this.provider = Web3.givenProvider;
@@ -69,12 +70,13 @@ export default class MetamaskService {
           .then((resChain) => {
             if (resChain === usedChain) {
               this.eth_requestAccounts()
-                .then((account) =>
+                .then((account) => {
+                  this.walletAddress = account[0];
                   resolve({
                     address: account[0],
                     network: resChain,
-                  }),
-                )
+                  });
+                })
                 .catch((_) => reject({ errorMsg: 'Not authorized' }));
             } else {
               reject({
@@ -89,12 +91,13 @@ export default class MetamaskService {
       } else {
         if (currentChain === usedChain) {
           this.eth_requestAccounts()
-            .then((account) =>
+            .then((account) => {
+              this.walletAddress = account[0];
               resolve({
                 address: account[0],
                 network: currentChain,
-              }),
-            )
+              });
+            })
             .catch((_) => reject({ errorMsg: 'Not authorized' }));
         } else {
           reject({
@@ -106,8 +109,8 @@ export default class MetamaskService {
     });
   }
 
-  getContract(abi, address: string) {
-    return new this.web3Provider.eth.Contract(abi, address);
+  getContract(tokenAddress: string, abi) {
+    return new this.web3Provider.eth.Contract(abi, tokenAddress);
   }
 
   getMethodInterface(abi, methodName: string) {
@@ -115,4 +118,50 @@ export default class MetamaskService {
       return m.name === methodName;
     })[0];
   }
+  encodeFunctionCall(abi, data) {
+    return this.web3Provider.eth.abi.encodeFunctionCall(abi, data);
+  }
+
+  totalSupply = async (tokenAddress: string, abi, tokenDecimals: number) => {
+    const contract = this.getContract(tokenAddress, abi);
+    const totalSupply = await contract.methods.totalSupply().call();
+
+    return +new BigNumber(totalSupply)
+      .dividedBy(new BigNumber(10).pow(tokenDecimals))
+      .toString(10);
+  };
+
+  approveToken = async (tokenAddress: string, abi, tokenDecimals: number) => {
+    const totalSypply = await this.totalSupply(
+      tokenAddress,
+      abi,
+      tokenDecimals,
+    );
+
+    const approveMethod = this.getMethodInterface('approve', abi);
+
+    const approveSignature = this.encodeFunctionCall(approveMethod, [
+      tokenAddress,
+      totalSypply,
+    ]);
+
+    // const approveTransaction = () => {
+    //   return this.sendTransaction(
+    //     {
+    //       from: this.walletAddress,
+    //       to: tokenAddress,
+    //       data: approveSignature,
+    //     }
+    //   );
+    // };
+
+    // const transaction = {
+    //   title: 'Authorise the contract, approving tokens',
+    //   to: tokenAddress,
+    //   data: approveSignature,
+    //   action: approveTransaction
+    // };
+
+    // return this.createTransactionObj(transaction, this.walletAddress);
+  };
 }
