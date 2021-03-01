@@ -135,6 +135,33 @@ export default class MetamaskService {
       .toString(10);
   };
 
+  checkTokenAllowance = (
+    walletAddress: string,
+    tokenAddress: string,
+    amount: number,
+    contract,
+  ) => {
+    return new Promise((resolve, reject) => {
+      contract.methods
+        .allowance(walletAddress, tokenAddress)
+        .call()
+        .then(
+          (result) => {
+            result = result ? result.toString(10) : result;
+            result = result === '0' ? null : result;
+            if (result && new BigNumber(result).minus(amount).isPositive()) {
+              resolve(true);
+            } else {
+              reject(false);
+            }
+          },
+          () => {
+            reject(false);
+          },
+        );
+    });
+  };
+
   approveToken = async (
     tokenAddress: string,
     abi: Array<any>,
