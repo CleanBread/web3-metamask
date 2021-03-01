@@ -1,11 +1,20 @@
 {
   "name": "metamask-web3",
   "version": "1.0.0",
-  "main": "index.js",
   "author": "CleanBread",
   "license": "MIT",
   "scripts": {
-    "start": "ts-node src/index.ts"
+    "start": "ts-node src/index.ts",
+    "build": "tsc"
+  },
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib/**/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CleanBread/web3-metamask"
   },
   "dependencies": {
     "bignumber.js": "^9.0.1",

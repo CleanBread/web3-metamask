@@ -25,7 +25,7 @@ export default class MetamaskService {
   private web3Provider;
   private testnet: string;
   private isProduction: boolean;
-  public walletAddress: string;
+  public walletAddress: string = '';
 
   constructor({ testnet, isProduction = false }: IMetamaskService) {
     this.provider = Web3.givenProvider;
@@ -34,14 +34,14 @@ export default class MetamaskService {
     this.testnet = testnet;
     this.isProduction = isProduction;
 
-    this.wallet.on('chainChanged', (newChain) => {
+    this.wallet.on('chainChanged', (newChain: any) => {
       const chainId = localStorage.getItem('chainId');
       if (String(chainId) !== String(newChain)) {
         localStorage.setItem('chainId', newChain);
         window.location.reload();
       }
     });
-    this.wallet.on('accountsChanged', (newAccounts) => {
+    this.wallet.on('accountsChanged', (newAccounts: any) => {
       window.location.reload();
     });
   }
@@ -109,7 +109,7 @@ export default class MetamaskService {
     });
   }
 
-  getContract(tokenAddress: string, abi) {
+  getContract(tokenAddress: string, abi: Array<any>) {
     return new this.web3Provider.eth.Contract(abi, tokenAddress);
   }
 
@@ -118,7 +118,7 @@ export default class MetamaskService {
       return m.name === methodName;
     })[0];
   }
-  encodeFunctionCall(abi: Array<any>, data) {
+  encodeFunctionCall(abi: any, data: Array<any>) {
     return this.web3Provider.eth.abi.encodeFunctionCall(abi, data);
   }
 
@@ -139,14 +139,14 @@ export default class MetamaskService {
     walletAddress: string,
     tokenAddress: string,
     amount: number,
-    contract,
+    contract: any,
   ) => {
     return new Promise((resolve, reject) => {
       contract.methods
         .allowance(walletAddress, tokenAddress)
         .call()
         .then(
-          (result) => {
+          (result: any) => {
             result = result ? result.toString(10) : result;
             result = result === '0' ? null : result;
             if (result && new BigNumber(result).minus(amount).isPositive()) {
@@ -188,7 +188,7 @@ export default class MetamaskService {
     });
   };
 
-  sendTransaction(transactionConfig) {
+  sendTransaction(transactionConfig: any) {
     return this.wallet.request({
       method: 'eth_sendTransaction',
       params: [transactionConfig],
