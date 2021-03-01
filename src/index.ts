@@ -15,8 +15,8 @@ const networks = {
 };
 
 interface IMetamaskService {
-  testnet: 'ropsten' | 'kovan' | 'rinkeby';
-  isProduction: boolean;
+  testnet?: 'ropsten' | 'kovan' | 'rinkeby';
+  isProduction?: boolean;
 }
 
 export default class MetamaskService {
@@ -28,9 +28,8 @@ export default class MetamaskService {
   public walletAddress: string = '';
 
   constructor({ testnet, isProduction = false }: IMetamaskService) {
-    this.provider = Web3.givenProvider;
     this.wallet = window.ethereum;
-    this.web3Provider = new Web3(this.provider);
+    this.web3Provider = new Web3(this.wallet);
     this.testnet = testnet;
     this.isProduction = isProduction;
 
@@ -168,7 +167,8 @@ export default class MetamaskService {
     tokenDecimals: number,
     walletAddress?: string,
   ) => {
-    const totalSypply = await this.totalSupply(
+    // проверить totalSupply
+    const totalSupply = await this.totalSupply(
       tokenAddress,
       abi,
       tokenDecimals,
@@ -178,7 +178,7 @@ export default class MetamaskService {
 
     const approveSignature = this.encodeFunctionCall(approveMethod, [
       tokenAddress,
-      totalSypply,
+      totalSupply,
     ]);
 
     return this.sendTransaction({
