@@ -113,16 +113,20 @@ export default class MetamaskService {
     return new this.web3Provider.eth.Contract(abi, tokenAddress);
   }
 
-  getMethodInterface(abi, methodName: string) {
+  getMethodInterface(abi: Array<any>, methodName: string) {
     return abi.filter((m) => {
       return m.name === methodName;
     })[0];
   }
-  encodeFunctionCall(abi, data) {
+  encodeFunctionCall(abi: Array<any>, data) {
     return this.web3Provider.eth.abi.encodeFunctionCall(abi, data);
   }
 
-  totalSupply = async (tokenAddress: string, abi, tokenDecimals: number) => {
+  totalSupply = async (
+    tokenAddress: string,
+    abi: Array<any>,
+    tokenDecimals: number,
+  ) => {
     const contract = this.getContract(tokenAddress, abi);
     const totalSupply = await contract.methods.totalSupply().call();
 
@@ -131,37 +135,36 @@ export default class MetamaskService {
       .toString(10);
   };
 
-  approveToken = async (tokenAddress: string, abi, tokenDecimals: number) => {
+  approveToken = async (
+    tokenAddress: string,
+    abi: Array<any>,
+    tokenDecimals: number,
+    walletAddress?: string,
+  ) => {
     const totalSypply = await this.totalSupply(
       tokenAddress,
       abi,
       tokenDecimals,
     );
 
-    const approveMethod = this.getMethodInterface('approve', abi);
+    const approveMethod = this.getMethodInterface(abi, 'approve');
 
     const approveSignature = this.encodeFunctionCall(approveMethod, [
       tokenAddress,
       totalSypply,
     ]);
 
-    // const approveTransaction = () => {
-    //   return this.sendTransaction(
-    //     {
-    //       from: this.walletAddress,
-    //       to: tokenAddress,
-    //       data: approveSignature,
-    //     }
-    //   );
-    // };
-
-    // const transaction = {
-    //   title: 'Authorise the contract, approving tokens',
-    //   to: tokenAddress,
-    //   data: approveSignature,
-    //   action: approveTransaction
-    // };
-
-    // return this.createTransactionObj(transaction, this.walletAddress);
+    return this.sendTransaction({
+      from: walletAddress || this.walletAddress,
+      to: tokenAddress,
+      data: approveSignature,
+    });
   };
+
+  sendTransaction(transactionConfig) {
+    return this.wallet.request({
+      method: 'eth_sendTransaction',
+      params: [transactionConfig],
+    });
+  }
 }
