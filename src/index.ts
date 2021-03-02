@@ -21,8 +21,7 @@ interface IMetamaskService {
 
 export default class MetamaskService {
   private wallet;
-  private provider;
-  private web3Provider;
+  public web3Provider;
   private testnet: string;
   private isProduction: boolean;
   public walletAddress: string = '';
@@ -121,26 +120,26 @@ export default class MetamaskService {
     return this.web3Provider.eth.abi.encodeFunctionCall(abi, data);
   }
 
-  totalSupply = async (
+  async totalSupply(
     tokenAddress: string,
     abi: Array<any>,
     tokenDecimals: number,
-  ) => {
+  ) {
     const contract = this.getContract(tokenAddress, abi);
     const totalSupply = await contract.methods.totalSupply().call();
 
     return +new BigNumber(totalSupply)
       .dividedBy(new BigNumber(10).pow(tokenDecimals))
       .toString(10);
-  };
+  }
 
-  checkTokenAllowance = async (
+  async checkTokenAllowance(
     tokenAddress: string,
     contract: any,
     abi: Array<any>,
     tokenDecimals: number,
     walletAddress?: string,
-  ) => {
+  ) {
     const walletAdr = walletAddress || this.walletAddress;
 
     try {
@@ -163,35 +162,61 @@ export default class MetamaskService {
     } catch (error) {
       return false;
     }
-  };
+  }
 
-  approveToken = async (
+  async approveToken(
     tokenAddress: string,
     abi: Array<any>,
     tokenDecimals: number,
     walletAddress?: string,
-  ) => {
-    const totalSupply = await this.totalSupply(
-      tokenAddress,
-      abi,
-      tokenDecimals,
-    );
+  ) {
+    try {
+      const totalSupply = await this.totalSupply(
+        tokenAddress,
+        abi,
+        tokenDecimals,
+      );
 
-    const approveMethod = this.getMethodInterface(abi, 'approve');
+      const approveMethod = this.getMethodInterface(abi, 'approve');
 
-    const approveSignature = this.encodeFunctionCall(approveMethod, [
-      tokenAddress,
-      new BigNumber(totalSupply)
-        .times(Math.pow(10, tokenDecimals))
-        .toString(10),
-    ]);
+      const approveSignature = this.encodeFunctionCall(approveMethod, [
+        tokenAddress,
+        this.calcTransactionAmount(totalSupply, tokenDecimals),
+      ]);
+
+      return this.sendTransaction({
+        from: walletAddress || this.walletAddress,
+        to: tokenAddress,
+        data: approveSignature,
+      });
+    } catch (error) {
+      return error;
+    }
+  }
+
+  calcTransactionAmount(amount: number, tokenDecimal: number) {
+    return new BigNumber(amount).times(Math.pow(10, tokenDecimal)).toString(10);
+  }
+
+  createTransaction(
+    abi: Array<any>,
+    method: string,
+    data: Array<any>,
+    tokenAddress: string,
+    walletAddress?: string,
+    value?,
+  ) {
+    const transactionMethod = this.getMethodInterface(abi, method);
+
+    const approveSignature = this.encodeFunctionCall(transactionMethod, data);
 
     return this.sendTransaction({
       from: walletAddress || this.walletAddress,
       to: tokenAddress,
       data: approveSignature,
+      value: value ? value : '',
     });
-  };
+  }
 
   sendTransaction(transactionConfig: any) {
     return this.wallet.request({
