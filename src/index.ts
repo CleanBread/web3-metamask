@@ -134,31 +134,35 @@ export default class MetamaskService {
       .toString(10);
   };
 
-  checkTokenAllowance = (
-    walletAddress: string,
+  checkTokenAllowance = async (
     tokenAddress: string,
-    amount: number,
     contract: any,
+    abi: Array<any>,
+    tokenDecimals: number,
+    walletAddress?: string,
   ) => {
-    return new Promise((resolve, reject) => {
-      contract.methods
-        .allowance(walletAddress, tokenAddress)
-        .call()
-        .then(
-          (result: any) => {
-            result = result ? result.toString(10) : result;
-            result = result === '0' ? null : result;
-            if (result && new BigNumber(result).minus(amount).isPositive()) {
-              resolve(true);
-            } else {
-              reject(false);
-            }
-          },
-          () => {
-            reject(false);
-          },
-        );
-    });
+    const walletAdr = walletAddress || this.walletAddress;
+
+    try {
+      let result = await contract.methods
+        .allowance(walletAdr, tokenAddress)
+        .call();
+      const totalSupply = await this.totalSupply(
+        tokenAddress,
+        abi,
+        tokenDecimals,
+      );
+
+      result = result ? result.toString(10) : result;
+      result = result === '0' ? null : result;
+      if (result && new BigNumber(result).minus(totalSupply).isPositive()) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      return false;
+    }
   };
 
   approveToken = async (
@@ -167,7 +171,6 @@ export default class MetamaskService {
     tokenDecimals: number,
     walletAddress?: string,
   ) => {
-    // проверить totalSupply
     const totalSupply = await this.totalSupply(
       tokenAddress,
       abi,
@@ -178,7 +181,9 @@ export default class MetamaskService {
 
     const approveSignature = this.encodeFunctionCall(approveMethod, [
       tokenAddress,
-      totalSupply,
+      new BigNumber(totalSupply)
+        .times(Math.pow(10, tokenDecimals))
+        .toString(10),
     ]);
 
     return this.sendTransaction({
